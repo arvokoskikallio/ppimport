@@ -84,7 +84,7 @@ namespace PPImport
                     Name = data.Info.Name,
                     Country = GetCountryByLongName(data.Info.Country),
                     Town = data.Info.Town,
-                    OtherInfo = data.Info.OtherInfo,
+                    OtherInfo = data.Info.OtherInfo.Replace(" (", ""),
                     PPProofStatus = data.Info.ProofStatus
                 };
         }
