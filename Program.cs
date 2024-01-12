@@ -159,8 +159,8 @@ namespace PPImport
                 time.Date = null;
             }
 
-            string sqlQuery = "INSERT INTO Times (PlayerId, Date, Track, Glitch, Flap, RunTime, Link)" +
-            "VALUES (@PlayerId, @Date, @Track, @Glitch, @Flap, @RunTime, @Link)";
+            string sqlQuery = "INSERT INTO Times (PlayerId, Date, Track, Glitch, Flap, RunTime, Link, Obsoleted)" +
+            "VALUES (@PlayerId, @Date, @Track, @Glitch, @Flap, @RunTime, @Link, 0)";
 
 
             using var connection = new SqlConnection(_connectionString);
