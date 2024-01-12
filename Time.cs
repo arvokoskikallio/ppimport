@@ -8,15 +8,13 @@ namespace PPImport
 
         }
 
-        public Time(DateTime date, int playerId, int track, bool glitch, bool flap, int minutes, int seconds, int milliseconds, string link, string ghost) {
+        public Time(DateTime date, int playerId, int track, bool glitch, bool flap, int runTime, string link, string ghost) {
             Date = date;
             PlayerId = playerId;
             Track = track;
             Glitch = glitch;
             Flap = flap;
-            Minutes = minutes;
-            Seconds = seconds;
-            Milliseconds = milliseconds;
+            RunTime = runTime;
             Link = link;
             Ghost = ghost;
         }
@@ -38,13 +36,7 @@ namespace PPImport
         public bool Flap { get; set; }
 
         [Required]
-        public int Minutes { get; set; }
-
-        [Required]
-        public int Seconds { get; set; }
-
-        [Required]
-        public int Milliseconds { get; set; }
+        public int RunTime { get; set; }
 
         public string? Link { get; set; }
 

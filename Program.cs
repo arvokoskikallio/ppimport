@@ -137,9 +137,7 @@ namespace PPImport
                     Track = Array.IndexOf(tracks.ToArray(), tracks.First(t => t == timeEntry.Track)),
                     Glitch = timeEntry.Glitch,
                     Flap = timeEntry.Flap,
-                    Minutes = timeEntry.m,
-                    Seconds = timeEntry.s,
-                    Milliseconds = timeEntry.ms,
+                    RunTime = timeEntry.m*60*1000 + timeEntry.s*1000 + timeEntry.ms,
                     Link = timeEntry.Video
                 });
             }
@@ -161,8 +159,8 @@ namespace PPImport
                 time.Date = null;
             }
 
-            string sqlQuery = "INSERT INTO Times (PlayerId, Date, Track, Glitch, Flap, Minutes, Seconds, Milliseconds, Link)" +
-            "VALUES (@PlayerId, @Date, @Track, @Glitch, @Flap, @Minutes, @Seconds, @Milliseconds, @Link)";
+            string sqlQuery = "INSERT INTO Times (PlayerId, Date, Track, Glitch, Flap, RunTime, Link)" +
+            "VALUES (@PlayerId, @Date, @Track, @Glitch, @Flap, @RunTime, @Link)";
 
 
             using var connection = new SqlConnection(_connectionString);
