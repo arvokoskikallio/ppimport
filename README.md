@@ -1,3 +1,5 @@
+NOTE: Only run this importer once you have already ran the MKL importer - there is duplication checking specifically designed to merge duplicate PP profiles into existing MKL profiles.
+
 Instructions:
 
 1. Add a file called config.txt to the root of the project
