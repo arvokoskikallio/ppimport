@@ -40,10 +40,10 @@ namespace PPImport
                 var playerWithMostTies = FindMostCommonInteger(playersWithTies);
 
                 //assert that if a player's 3lap timesheet have more than 1/3 percentage of ties, the player is not unique
-                if(playerWithMostTies.TieCount == threeLapTimes.Count() * 0.34)
+                if(playerWithMostTies.TieCount > threeLapTimes.Count() * 0.34)
                 {
                     var existingPlayer = await GetPlayer(playerWithMostTies.PlayerId);
-                    Console.WriteLine("Duplicate found - " + player.Name + " = " + existingPlayer.Name + " - Importing only flaps and potential faster times");
+                    Console.WriteLine("Duplicate found (" + playerWithMostTies.TieCount + "/" + threeLapTimes.Count() + " ties) - " + player.Name + " = " + existingPlayer.Name + " - Importing only flaps and potential faster times");
                     playerIsUnique = false;
                 }
 
