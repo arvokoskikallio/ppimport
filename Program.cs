@@ -63,6 +63,10 @@ namespace PPImport
                 else
                 {
                     var playerId = playerWithMostTies.PlayerId;
+                    var existingPlayer = await GetPlayer(playerWithMostTies.PlayerId);
+
+                    //add potential PP player info to the existing player
+                    UpdatePlayerInfo(playerId, player);
 
                     //if player is not unique, import all the flaps to the existing player's timesheet (there are no flaps in the MKL data)
                     foreach (var time in flapTimes)
@@ -81,6 +85,7 @@ namespace PPImport
                         if(newTime != null && existingTime.RunTime > newTime.RunTime)
                         {
                             Obsolete(existingTime.Id);
+                            newTime.PlayerId = playerId;
                             PushTime(newTime);
                         }
                     }
@@ -251,6 +256,15 @@ namespace PPImport
 
             using var connection = new SqlConnection(_connectionString);
             await connection.ExecuteAsync(sqlQuery, new { Id = id });
+        }
+
+        private static async void UpdatePlayerInfo(int id, Player player)
+        {
+            player.Id = id;
+            string sqlQuery = "UPDATE Players SET Town = @Town, OtherInfo = @OtherInfo, PPProofStatus = @PPProofStatus WHERE Id = @Id";
+
+            using var connection = new SqlConnection(_connectionString);
+            await connection.ExecuteAsync(sqlQuery, player);
         }
 
         private static PlayerWithTies FindMostCommonInteger(List<int> list)
