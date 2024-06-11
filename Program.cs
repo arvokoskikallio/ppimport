@@ -39,17 +39,19 @@ namespace PPImport
                 //find most commonly found player to have ties, as well as the amount of ties that player has
                 var playerWithMostTies = FindMostCommonInteger(playersWithTies);
 
-                //assert that if a player's 3lap timesheet have more than 1/3 percentage of ties, the player is not unique
-                if(playerWithMostTies.TieCount > threeLapTimes.Count() * 0.34)
+                //assert that if a player's 3lap timesheet have more than 1/3 percentage of ties, the player is not unique (more than 1/2 if player has less than 3 times)
+                if((threeLapTimes.Count() >= 3 && playerWithMostTies.TieCount > threeLapTimes.Count() * 0.34) || (threeLapTimes.Count() < 3 && playerWithMostTies.TieCount > threeLapTimes.Count() * 0.51))
                 {
                     var existingPlayer = await GetPlayer(playerWithMostTies.PlayerId);
-                    Console.WriteLine("Duplicate found (" + playerWithMostTies.TieCount + "/" + threeLapTimes.Count() + " ties) - " + player.Name + " = " + existingPlayer.Name + " - Importing only flaps and potential faster times");
+                    Console.WriteLine("Duplicate found (" + playerWithMostTies.TieCount + "/" + threeLapTimes.Count() + " 3lap ties) - " + player.Name + " = " + existingPlayer.Name + " - Importing only flaps and potential faster times");
                     playerIsUnique = false;
                 }
 
                 //if player is unique, import the player, as well as their times
                 if(playerIsUnique)
                 {
+                    Console.WriteLine("New player found - " + player.Name + " - Importing all times");
+                    
                     var playerId = await PushPlayer(player);
 
                     foreach (var time in times)
@@ -74,9 +76,9 @@ namespace PPImport
                     //loop through existing 3lap times, if the PP dump has a faster time than existing MKL time, obsolete the old time and keep the faster one
                     foreach(var existingTime in existingThreeLapTimes)
                     {
-                        var newTime = threeLapTimes.Where(t => existingTime.Glitch == t.Glitch && existingTime.Track == t.Track).First();
+                        var newTime = threeLapTimes.Where(t => existingTime.Glitch == t.Glitch && existingTime.Track == t.Track).FirstOrDefault();
 
-                        if(existingTime.RunTime > newTime.RunTime)
+                        if(newTime != null && existingTime.RunTime > newTime.RunTime)
                         {
                             Obsolete(existingTime.Id);
                             PushTime(newTime);
@@ -266,6 +268,11 @@ namespace PPImport
                 {
                     counts[num] = 1;
                 }
+            }
+
+            if(counts.Keys.Count == 0)
+            {
+                return new PlayerWithTies(0, 0);
             }
 
             // Find the integer with the maximum count
