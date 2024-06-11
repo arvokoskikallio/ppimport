@@ -41,7 +41,7 @@ namespace PPImport
                 var existingThreeLapTimes = await GetThreeLapTimesByPlayer(playerWithMostTies.PlayerId);
 
                 //assert that if a player's existing 3lap timesheet have more than 1/3 percentage of ties, the player is not unique (more than 1/2 if player has less than 3 times on the PP)
-                if((existingThreeLapTimes.Count() >= 3 && playerWithMostTies.TieCount > existingThreeLapTimes.Count() * 0.34) || (existingThreeLapTimes.Count() < 3 && playerWithMostTies.TieCount > existingThreeLapTimes.Count() * 0.51))
+                if(((existingThreeLapTimes.Count() >= 3 && playerWithMostTies.TieCount > existingThreeLapTimes.Count() * 0.34) || (existingThreeLapTimes.Count() < 3 && playerWithMostTies.TieCount > existingThreeLapTimes.Count() * 0.51)) && (playerWithMostTies.TieCount > 1))
                 {
                     var existingPlayer = await GetPlayer(playerWithMostTies.PlayerId);
                     Console.WriteLine("Duplicate found (" + playerWithMostTies.TieCount + "/" + existingThreeLapTimes.Count() + " 3lap ties) - " + player.Name + " = " + existingPlayer.Name + " - Importing only flaps and potential faster times");
