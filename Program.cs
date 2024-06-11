@@ -88,6 +88,14 @@ namespace PPImport
                             newTime.PlayerId = playerId;
                             PushTime(newTime);
                         }
+                        else if(newTime != null && existingTime.RunTime == newTime.RunTime)
+                        {
+                            //MKL does not have dates for times, import them from the PP whenever possible
+                            if(newTime.Date != null)
+                            {
+                                AddDate(existingTime.Id, newTime.Date.Value);
+                            }
+                        }
                     }
                 }
             }
@@ -265,6 +273,14 @@ namespace PPImport
 
             using var connection = new SqlConnection(_connectionString);
             await connection.ExecuteAsync(sqlQuery, player);
+        }
+
+        private static async void AddDate(int id, DateTime date)
+        {
+            string sqlQuery = "UPDATE Times SET Date = @Date WHERE Id = @Id";
+
+            using var connection = new SqlConnection(_connectionString);
+            await connection.ExecuteAsync(sqlQuery, new { Date = date, Id = id});
         }
 
         private static PlayerWithTies FindMostCommonInteger(List<int> list)
