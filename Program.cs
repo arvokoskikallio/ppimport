@@ -66,7 +66,7 @@ namespace PPImport
                     var existingPlayer = await GetPlayer(playerWithMostTies.PlayerId);
 
                     //add potential PP player info to the existing player
-                    UpdatePlayerInfo(playerId, existingPlayer);
+                    UpdatePlayerInfo(playerId, player);
 
                     //if player is not unique, import all the flaps to the existing player's timesheet (there are no flaps in the MKL data)
                     foreach (var time in flapTimes)
