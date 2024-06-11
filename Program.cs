@@ -38,12 +38,13 @@ namespace PPImport
 
                 //find most commonly found player to have ties, as well as the amount of ties that player has
                 var playerWithMostTies = FindMostCommonInteger(playersWithTies);
+                var existingThreeLapTimes = await GetThreeLapTimesByPlayer(playerWithMostTies.PlayerId);
 
-                //assert that if a player's 3lap timesheet have more than 1/3 percentage of ties, the player is not unique (more than 1/2 if player has less than 3 times)
-                if((threeLapTimes.Count() >= 3 && playerWithMostTies.TieCount > threeLapTimes.Count() * 0.34) || (threeLapTimes.Count() < 3 && playerWithMostTies.TieCount > threeLapTimes.Count() * 0.51))
+                //assert that if a player's existing 3lap timesheet have more than 1/3 percentage of ties, the player is not unique (more than 1/2 if player has less than 3 times on the PP)
+                if((existingThreeLapTimes.Count() >= 3 && playerWithMostTies.TieCount > existingThreeLapTimes.Count() * 0.34) || (existingThreeLapTimes.Count() < 3 && playerWithMostTies.TieCount > existingThreeLapTimes.Count() * 0.51))
                 {
                     var existingPlayer = await GetPlayer(playerWithMostTies.PlayerId);
-                    Console.WriteLine("Duplicate found (" + playerWithMostTies.TieCount + "/" + threeLapTimes.Count() + " 3lap ties) - " + player.Name + " = " + existingPlayer.Name + " - Importing only flaps and potential faster times");
+                    Console.WriteLine("Duplicate found (" + playerWithMostTies.TieCount + "/" + existingThreeLapTimes.Count() + " 3lap ties) - " + player.Name + " = " + existingPlayer.Name + " - Importing only flaps and potential faster times");
                     playerIsUnique = false;
                 }
 
@@ -74,8 +75,6 @@ namespace PPImport
                         time.PlayerId = playerId;
                         PushTime(time);
                     }
-
-                    var existingThreeLapTimes = await GetThreeLapTimesByPlayer(playerId);
 
                     //loop through existing 3lap times, if the PP dump has a faster time than existing MKL time, obsolete the old time and keep the faster one
                     foreach(var existingTime in existingThreeLapTimes)
