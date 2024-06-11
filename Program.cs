@@ -1,4 +1,5 @@
 ﻿using Dapper;
+using System.Collections;
 using System.Data.SqlClient;
 using System.Globalization;
 
@@ -6,14 +7,14 @@ namespace PPImport
 {
     class Program
     {
-        private static string[] contents = File.ReadAllText(@"C:\Users\Arvo Koskikallio\ppimport\config.txt").Split("\r\n");
+        private static string[] contents = File.ReadAllText(@"C:\Users\arvok\ppimport\config.txt").Split("\r\n");
         private static string _connectionString = contents[0];
         private static DateTime minDate = DateTime.Parse("2008-04-09");
 
         static async Task Main(string[] args)
         {
             List<MarioKartData> marioKartData = new List<MarioKartData>();
-            using (StreamReader r = new StreamReader("C:\\Users\\Arvo Koskikallio\\ppimport\\mkwpp times.json"))
+            using (StreamReader r = new StreamReader("C:\\Users\\arvok\\ppimport\\mkwpp times.json"))
             {
                 string json = r.ReadToEnd();
                 marioKartData = Newtonsoft.Json.JsonConvert.DeserializeObject<List<MarioKartData>>(json);
@@ -23,13 +24,64 @@ namespace PPImport
             {
                 // Map to List<Player> and List<Time>
                 var player = MapPlayer(data);
-                var playerId = await PushPlayer(player);
-                List<Time> times = MapTimes(data);
+                var times = MapTimes(data);
+                var threeLapTimes = times.Where(t => !t.Flap);
+                var flapTimes = times.Where(t => t.Flap);
+                List<int> playersWithTies = new();
+                var playerIsUnique = true;
 
-                foreach (var time in times)
+                //loop through all 3lap times to find players who tie them
+                foreach(var time in threeLapTimes)
                 {
-                    time.PlayerId = playerId;
-                    PushTime(time);
+                    playersWithTies.AddRange(await GetPlayerTiesByTime(time));
+                }
+
+                //find most commonly found player to have ties, as well as the amount of ties that player has
+                var playerWithMostTies = FindMostCommonInteger(playersWithTies);
+
+                //assert that if a player's 3lap timesheet have more than 1/3 percentage of ties, the player is not unique
+                if(playerWithMostTies.TieCount == threeLapTimes.Count() * 0.34)
+                {
+                    var existingPlayer = await GetPlayer(playerWithMostTies.PlayerId);
+                    Console.WriteLine("Duplicate found - " + player.Name + " = " + existingPlayer.Name + " - Importing only flaps and potential faster times");
+                    playerIsUnique = false;
+                }
+
+                //if player is unique, import the player, as well as their times
+                if(playerIsUnique)
+                {
+                    var playerId = await PushPlayer(player);
+
+                    foreach (var time in times)
+                    {
+                        time.PlayerId = playerId;
+                        PushTime(time);
+                    }
+                }
+                else
+                {
+                    var playerId = playerWithMostTies.PlayerId;
+
+                    //if player is not unique, import all the flaps to the existing player's timesheet (there are no flaps in the MKL data)
+                    foreach (var time in flapTimes)
+                    {
+                        time.PlayerId = playerId;
+                        PushTime(time);
+                    }
+
+                    var existingThreeLapTimes = await GetThreeLapTimesByPlayer(playerId);
+
+                    //loop through existing 3lap times, if the PP dump has a faster time than existing MKL time, obsolete the old time and keep the faster one
+                    foreach(var existingTime in existingThreeLapTimes)
+                    {
+                        var newTime = threeLapTimes.Where(t => existingTime.Glitch == t.Glitch && existingTime.Track == t.Track).First();
+
+                        if(existingTime.RunTime > newTime.RunTime)
+                        {
+                            Obsolete(existingTime.Id);
+                            PushTime(newTime);
+                        }
+                    }
                 }
             }
         }
@@ -166,6 +218,71 @@ namespace PPImport
             using var connection = new SqlConnection(_connectionString);
             await connection.ExecuteAsync(sqlQuery, time);
         }
+
+        private static async Task<IEnumerable<int>> GetPlayerTiesByTime(Time time)
+        {
+            string sqlQuery = "SELECT PlayerId FROM Times WHERE RunTime = @RunTime AND Glitch = @Glitch AND Flap = @Flap AND Track = @Track";
+
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryAsync<int>(sqlQuery, time);
+        }
+        
+        private static async Task<IEnumerable<Time>> GetThreeLapTimesByPlayer(int playerId)
+        {
+            string sqlQuery = "SELECT * FROM Times WHERE PlayerId = @PlayerId AND Flap = 0";
+
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryAsync<Time>(sqlQuery, new { PlayerId = playerId });
+        }
+        
+        private static async Task<Player> GetPlayer(int id)
+        {
+            string sqlQuery = "SELECT * FROM Players WHERE Id = @Id";
+
+            using var connection = new SqlConnection(_connectionString);
+            return await connection.QueryFirstOrDefaultAsync<Player>(sqlQuery, new { Id = id });
+        }
+
+        private static async void Obsolete(int id)
+        {
+            string sqlQuery = "UPDATE Times SET Obsoleted = 1 WHERE Id = @Id";
+
+            using var connection = new SqlConnection(_connectionString);
+            await connection.ExecuteAsync(sqlQuery, new { Id = id });
+        }
+
+        private static PlayerWithTies FindMostCommonInteger(List<int> list)
+        {
+            Dictionary<int, int> counts = new();
+
+            // Count the occurrences of each integer in the list
+            foreach (var num in list)
+            {
+                if (counts.ContainsKey(num))
+                {
+                    counts[num]++;
+                }
+                else
+                {
+                    counts[num] = 1;
+                }
+            }
+
+            // Find the integer with the maximum count
+            int mostCommon = counts.Keys.First();
+            int maxCount = counts[mostCommon];
+
+            foreach (var kvp in counts)
+            {
+                if (kvp.Value > maxCount)
+                {
+                    mostCommon = kvp.Key;
+                    maxCount = kvp.Value;
+                }
+            }
+
+            return new PlayerWithTies(mostCommon, maxCount);
+        }
     }
 
     public class TimeEntry
@@ -194,5 +311,17 @@ namespace PPImport
     {
         public PlayerInfo Info { get; set; }
         public List<TimeEntry> Times { get; set; }
+    }    
+    
+    public class PlayerWithTies
+    {
+        public PlayerWithTies(int playerId, int tieCount)
+        {
+            PlayerId = playerId;
+            TieCount = tieCount;
+        }
+
+        public int PlayerId { get; set; }
+        public int TieCount { get; set; }
     }
 }
